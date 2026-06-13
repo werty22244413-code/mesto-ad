@@ -1,0 +1,20 @@
+
+@media screen and (max-width: 568px) {
+    .popup__content_content_info {
+        max-width: calc(100% - 40px);
+    }
+}
+
+.popup__card-preview {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+@media screen and (max-width: 568px) {
+    .popup__card-preview {
+        height: 120px;
+    }
+}
