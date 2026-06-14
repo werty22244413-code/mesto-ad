@@ -30,3 +30,14 @@ export const createCardElement = (data, userId, { onImage, onLike, onDelete }) =
 
   return card;
 };
+
+// Функция для удаления элемента карточки из DOM
+export const removeCardElement = (cardElement) => {
+  cardElement.remove();
+};
+
+// Функция для обновления лайка (визуальный тумблер и счетчик)
+export const updateLikeState = (likeButton, likeCountElement, likesArray) => {
+  likeButton.classList.toggle('card__like-button_is-active');
+  likeCountElement.textContent = likesArray.length;
+};

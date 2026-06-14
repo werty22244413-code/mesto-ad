@@ -1,9 +1,9 @@
 import { getUser, getCards, updateUser, updateAvatar, addCard, removeCard, setLike, unsetLike } from './components/api.js';
-import { createCardElement } from './components/card.js';
+import { createCardElement, updateLikeState, removeCardElement } from './components/card.js';
 import { openPopup, closePopup, initPopupClose } from './components/modal.js';
 import { enableValidation, clearValidation } from './components/validation.js';
 
-const VALIDATION = {
+const VALIDATION_CONFIG = {
   formSelector: '.popup__form',
   inputSelector: '.popup__input',
   submitButtonSelector: '.popup__button',
@@ -44,8 +44,6 @@ const profileAbout = document.querySelector('.profile__description');
 const profileAvatar = document.querySelector('.profile__image');
 const logo = document.querySelector('.header__logo');
 
-let cachedCards = [];
-
 const toDate = (iso) =>
   new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -69,48 +67,53 @@ const handleImage = (name, link) => {
   openPopup(imagePopup);
 };
 
-const handleDelete = (cardEl, cardId) => {
-  removeCard(cardId)
-    .then(() => {
-      cardEl.remove();
-      cachedCards = cachedCards.filter((c) => c._id !== cardId);
-    })
-    .catch(console.error);
+const handleDelete = (cardEl, cardId) => { 
+  removeCard(cardId) 
+    .then(() => { 
+      removeCardElement(cardEl); 
+    }) 
+    .catch(console.error); 
 };
 
-const handleLike = (cardEl, data, likeBtn, likeCount) => {
-  const liked = likeBtn.classList.contains('card__like-button_is-active');
-  const action = liked ? unsetLike : setLike;
-  action(data._id)
-    .then((updated) => {
-      likeBtn.classList.toggle('card__like-button_is-active');
-      likeCount.textContent = updated.likes.length;
-      data.likes = updated.likes;
-    })
-    .catch(console.error);
+const handleLike = (cardEl, data, likeBtn, likeCount) => { 
+
+  const isLiked = likeBtn.classList.contains('card__like-button_is-active'); 
+  const action = isLiked ? unsetLike : setLike; 
+  
+  action(data._id) 
+    .then((updatedCardData) => { 
+      updateLikeState(likeBtn, likeCount, updatedCardData.likes);
+      data.likes = updatedCardData.likes; 
+    }) 
+    .catch(console.error); 
 };
 
-const handleFooterClick = () => {
-  if (cachedCards.length === 0) return;
+const handleFooterClick = () => { 
 
-  statsInfo.innerHTML = '';
-  statsCardsList.innerHTML = '';
+  getCards() 
+    .then((cards) => { 
+      if (cards.length === 0) return; 
+ 
+      statsInfo.innerHTML = ''; 
+      statsCardsList.innerHTML = ''; 
 
-  const sorted = [...cachedCards].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  const totalLikes = cachedCards.reduce((sum, c) => sum + c.likes.length, 0);
-  const mostLiked = cachedCards.reduce((max, c) => (c.likes.length > max.likes.length ? c : max), cachedCards[0]);
-
-  statsInfo.append(
-    makeStatRow('Всего карточек:', cachedCards.length),
-    makeStatRow('Первая добавлена:', toDate(sorted[0].createdAt)),
-    makeStatRow('Последняя добавлена:', toDate(sorted[sorted.length - 1].createdAt)),
-    makeStatRow('Всего лайков:', totalLikes),
-    makeStatRow('Самая популярная:', `${mostLiked.name} (${mostLiked.likes.length})`)
-  );
-
-  cachedCards.forEach((card) => statsCardsList.append(makeCardBadge(card.name)));
-
-  openPopup(statsPopup);
+      const sorted = [...cards].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)); 
+      const totalLikes = cards.reduce((sum, c) => sum + c.likes.length, 0); 
+      const mostLiked = cards.reduce((max, c) => (c.likes.length > max.likes.length ? c : max), cards[0]); 
+ 
+      statsInfo.append( 
+        makeStatRow('Всего карточек:', cards.length), 
+        makeStatRow('Первая добавлена:', toDate(sorted[0].createdAt)), 
+        makeStatRow('Последняя добавлена:', toDate(sorted[sorted.length - 1].createdAt)), 
+        makeStatRow('Всего лайков:', totalLikes), 
+        makeStatRow('Самая популярная:', `${mostLiked.name} (${mostLiked.likes.length})`) 
+      ); 
+ 
+      cards.forEach((card) => statsCardsList.append(makeCardBadge(card.name))); 
+ 
+      openPopup(statsPopup); 
+    }) 
+    .catch(console.error); 
 };
 
 const renderCard = (data, userId, prepend = false) => {
@@ -125,19 +128,19 @@ const renderCard = (data, userId, prepend = false) => {
 document.querySelector('.profile__edit-button').addEventListener('click', () => {
   nameInput.value = profileTitle.textContent;
   aboutInput.value = profileAbout.textContent;
-  clearValidation(profileForm, VALIDATION);
+  clearValidation(profileForm, VALIDATION_CONFIG);
   openPopup(profilePopup);
 });
 
 document.querySelector('.profile__add-button').addEventListener('click', () => {
   cardForm.reset();
-  clearValidation(cardForm, VALIDATION);
+  clearValidation(cardForm, VALIDATION_CONFIG);
   openPopup(cardPopup);
 });
 
 profileAvatar.addEventListener('click', () => {
   avatarForm.reset();
-  clearValidation(avatarForm, VALIDATION);
+  clearValidation(avatarForm, VALIDATION_CONFIG);
   openPopup(avatarPopup);
 });
 
@@ -170,7 +173,6 @@ avatarForm.addEventListener('submit', (e) => {
 
 Promise.all([getUser(), getCards()])
   .then(([user, cards]) => {
-    cachedCards = cards;
     profileTitle.textContent = user.name;
     profileAbout.textContent = user.about;
     profileAvatar.style.backgroundImage = `url(${user.avatar})`;
@@ -184,7 +186,6 @@ cardForm.addEventListener('submit', (e) => {
   cardSaveBtn.textContent = 'Создание...';
   addCard(cardNameInput.value, cardLinkInput.value)
     .then((data) => {
-      cachedCards.unshift(data);
       renderCard(data, data.owner._id, true);
       closePopup(cardPopup);
       cardForm.reset();
@@ -195,4 +196,4 @@ cardForm.addEventListener('submit', (e) => {
 
 document.querySelectorAll('.popup').forEach(initPopupClose);
 
-enableValidation(VALIDATION);
+enableValidation(VALIDATION_CONFIG);
