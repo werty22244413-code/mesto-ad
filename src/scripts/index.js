@@ -89,7 +89,6 @@ const handleLike = (cardEl, data, likeBtn, likeCount, isLiked) => {
 };
 
 const handleFooterClick = () => { 
-
   getCards() 
     .then((cards) => { 
       if (cards.length === 0) return; 
@@ -99,10 +98,28 @@ const handleFooterClick = () => {
 
       const uniqueUsers = new Set(cards.map(c => c.owner._id));
       const totalUsersCount = uniqueUsers.size;
-      const mostLikedCard = cards.reduce((max, c) => (c.likes.length > max.likes.length ? c : max), cards[0]); 
-      const maxLikesCount = mostLikedCard ? mostLikedCard.likes.length : 0;
-      const championName = mostLikedCard && mostLikedCard.owner ? mostLikedCard.owner.name : 'Нет автора';
+
       const totalLikes = cards.reduce((sum, c) => sum + c.likes.length, 0); 
+
+      const likesPerUser = {}; 
+      const userNames = {};    
+
+      cards.forEach(card => {
+        card.likes.forEach(userWhoLiked => {
+          const userId = userWhoLiked._id;
+          likesPerUser[userId] = (likesPerUser[userId] || 0) + 1;
+          userNames[userId] = userWhoLiked.name; 
+        });
+      });
+
+      const userLikesCounts = Object.values(likesPerUser);
+      const maxLikesCount = userLikesCounts.length > 0 ? Math.max(...userLikesCounts) : 0;
+
+      let championName = 'Нет активных пользователей';
+      if (maxLikesCount > 0) {
+        const championId = Object.keys(likesPerUser).find(key => likesPerUser[key] === maxLikesCount);
+        championName = userNames[championId] || 'Неизвестный пользователь';
+      }
  
       statsInfo.append( 
         makeStatRow('Всего пользователей:', totalUsersCount), 
