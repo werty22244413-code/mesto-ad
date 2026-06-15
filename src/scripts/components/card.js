@@ -21,15 +21,11 @@ export const createCardElement = (data, userId, { onImage, onLike, onDelete }) =
 
   img.addEventListener('click', () => onImage(data.name, data.link));
   
-  // === ИЗМЕНЕНИЯ ЗДЕСЬ ===
   likeBtn.addEventListener('click', () => {
-    // 1. Проверяем класс прямо в момент клика внутри карточки
     const isLiked = likeBtn.classList.contains('card__like-button_is-active');
     
-    // 2. Передаем статус пятым параметром (isLiked)
     onLike(card, data, likeBtn, likeCount, isLiked);
   });
-  // =======================
 
   if (data.owner._id === userId) {
     deleteBtn.addEventListener('click', () => onDelete(card, data._id));
